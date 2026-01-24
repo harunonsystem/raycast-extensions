@@ -4,5 +4,3 @@ export interface TimeOption {
 	workHours: number;
 	breakMinutes: number;
 }
-
-export type Language = "ja" | "en";

@@ -1,4 +1,4 @@
-import type { Language, TimeOption } from "./types";
+import type { TimeOption } from "./types";
 
 function parseTime(timeStr: string): Date {
 	const parts = timeStr.split(":").map(Number);
@@ -9,29 +9,23 @@ function parseTime(timeStr: string): Date {
 	return date;
 }
 
-export function formatTime(date: Date, lang: Language): string {
-	const locale = lang === "ja" ? "ja-JP" : "en-US";
-	return date.toLocaleTimeString(locale, {
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: false,
-	});
+export function formatTime(date: Date): string {
+	return formatTimeString(date.getHours(), date.getMinutes());
 }
 
-export function getCurrentTime(lang: Language): string {
-	return formatTime(new Date(), lang);
+export function getCurrentTime(): string {
+	return formatTime(new Date());
 }
 
 export function calculateLeaveTime(
 	startTime: string,
 	workHours: number,
 	breakMinutes: number,
-	lang: Language,
 ): string {
 	const start = parseTime(startTime);
 	const totalMinutes = workHours * 60 + breakMinutes;
 	const leave = new Date(start.getTime() + totalMinutes * 60000);
-	return formatTime(leave, lang);
+	return formatTime(leave);
 }
 
 export function calculateRemainingTime(
@@ -41,28 +35,27 @@ export function calculateRemainingTime(
 	const now = new Date();
 	let leave = parseTime(leaveTime);
 
-	// 出勤時間がある場合、「退勤時刻 < 出勤時刻」なら日をまたぐシフトとみなす
+	// If start time is provided and leave time < start time, treat as overnight shift
 	if (startTime) {
 		const start = parseTime(startTime);
 		if (leave < start) {
-			// 例: start=22:00, leave=06:00 の場合は 22:00〜翌06:00 のシフト
-			// このとき leave は「出勤日の翌日」の 06:00 を表す必要がある。
+			// Example: start=22:00, leave=06:00 represents a 22:00 to next day 06:00 shift.
+			// The leave time needs to represent 06:00 of the next calendar day.
 			//
-			// ただし、今(now)がどちらの日付側にいるかで、+24時間するかどうかが変わる:
+			// Whether to add +24 hours depends on which side of midnight we're currently on:
 			// - now >= start:
-			//     まだ「出勤日」の日中〜夜にいる (例: 23:00)。
-			//     退勤は「翌日」の 06:00 なので、leave に +24時間する。
+			//     Still on the start day (e.g., 23:00).
+			//     Leave is next day's 06:00, so add +24 hours to leave.
 			// - now < start:
-			//     すでに日付が変わっており、深夜〜早朝帯にいる (例: 01:00)。
-			//     このとき 06:00 は「今いるカレンダー日付」の 06:00 を指すため、
-			//     すでに翌日側にいて +24時間は不要。
-			if (now >= start) {
-				// まだ出勤日の日中〜夜にいる → 退勤はカレンダー上の明日
+			//     Already past midnight in the early morning (e.g., 01:00).
+			//     06:00 refers to today's calendar date, so no +24 hours needed.
+			if (now >= start || now > leave) {
+				// Still on start day -> leave is tomorrow on the calendar
 				leave = new Date(leave.getTime() + 24 * 60 * 60 * 1000);
 			}
-			// now < start の場合:
-			//   シフト的には「前日から続く深夜シフト中」だが、
-			//   カレンダー上はすでに退勤日の深夜〜早朝にいるため leave はそのまま使用する。
+			// If now < start:
+			//   We're in the "overnight shift from yesterday" but already on
+			//   the leave day's calendar date, so leave time is used as-is.
 		}
 	}
 
@@ -78,7 +71,7 @@ export function calculateRemainingTime(
 const START_HOURS = [7, 8, 9, 10, 11, 12, 13] as const;
 const MINUTE_OPTIONS = [0, 15, 30, 45] as const;
 
-/** HH:MM形式の時間文字列を生成 */
+/** Generate HH:MM format time string */
 export function formatTimeString(hours: number, minutes: number): string {
 	return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
@@ -86,14 +79,13 @@ export function formatTimeString(hours: number, minutes: number): string {
 export function generateTimeOptions(
 	workHours: number,
 	breakMinutes: number,
-	lang: Language,
 ): TimeOption[] {
 	return START_HOURS.flatMap((hour) =>
 		MINUTE_OPTIONS.map((minute) => {
 			const startTime = formatTimeString(hour, minute);
 			return {
 				startTime,
-				leaveTime: calculateLeaveTime(startTime, workHours, breakMinutes, lang),
+				leaveTime: calculateLeaveTime(startTime, workHours, breakMinutes),
 				workHours,
 				breakMinutes,
 			};

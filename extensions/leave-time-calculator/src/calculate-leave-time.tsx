@@ -18,15 +18,14 @@ import {
 	calculateRemainingTime,
 	formatTimeString,
 } from "./lib/time-utils";
-import { getLanguage, useTranslations } from "./lib/translations";
 
-// 現在時刻を HH:MM 形式で取得
+// Get current time in HH:MM format
 const getCurrentTimeString = () => {
 	const now = new Date();
 	return formatTimeString(now.getHours(), now.getMinutes());
 };
 
-// コンポーネント外で1度だけ生成（パフォーマンス最適化）
+// Generate once outside component (performance optimization)
 const START_TIMES = (() => {
 	const times: string[] = [];
 	for (let h = 7; h <= 13; h++) {
@@ -41,8 +40,6 @@ export default function Command() {
 	const prefs = getPreferenceValues<Preferences.CalculateLeaveTime>();
 	const workHours = parseFloat(prefs.defaultWorkHours || "8");
 	const breakMins = parseInt(prefs.defaultBreakMinutes || "60", 10);
-	const lang = getLanguage(prefs.language || "system");
-	const t = useTranslations(lang);
 
 	const [todayStart, setTodayStart] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -55,25 +52,20 @@ export default function Command() {
 		});
 	}, []);
 
-	// 現在時刻（1分ごとに更新）
+	// Current time (updated every minute)
 	const [currentTime, setCurrentTime] = useState(getCurrentTimeString);
 
-	// Dynamic subtitle更新 + 定期更新
+	// Dynamic subtitle update + periodic refresh
 	const [, setTick] = useState(0);
 
 	useEffect(() => {
 		const updateSubtitle = async () => {
 			if (todayStart) {
-				const leave = calculateLeaveTime(
-					todayStart,
-					workHours,
-					breakMins,
-					lang,
-				);
+				const leave = calculateLeaveTime(todayStart, workHours, breakMins);
 				const rem = calculateRemainingTime(leave, todayStart);
 				const subtitle = rem.isPast
-					? t.overtime(rem.hours, rem.minutes)
-					: `${leave} 退勤 - ${t.remaining(rem.hours, rem.minutes)}`;
+					? `${rem.hours}h ${rem.minutes}m overtime`
+					: `${leave} leave - ${rem.hours}h ${rem.minutes}m left`;
 				await updateCommandMetadata({ subtitle });
 			} else {
 				await updateCommandMetadata({ subtitle: "" });
@@ -81,15 +73,15 @@ export default function Command() {
 		};
 		updateSubtitle();
 
-		// 1分ごとに更新
+		// Update every minute
 		const interval = setInterval(() => {
 			updateSubtitle();
 			setCurrentTime(getCurrentTimeString());
-			setTick((tick) => tick + 1); // UIも再レンダリング
+			setTick((tick) => tick + 1); // Re-render UI
 		}, 60000);
 
 		return () => clearInterval(interval);
-	}, [todayStart, workHours, breakMins, lang, t]);
+	}, [todayStart, workHours, breakMins]);
 
 	const handleSelect = async (startTime: string) => {
 		await setTodayStartTime(startTime);
@@ -101,7 +93,7 @@ export default function Command() {
 		setTodayStart(null);
 	};
 
-	// カスタム時間のパース（9:21 や 09:21 形式）
+	// Parse custom time (formats: 9:21 or 09:21)
 	const parseCustomTime = (input: string): string | null => {
 		const match = input.match(/^(\d{1,2}):(\d{2})$/);
 		if (!match) return null;
@@ -113,9 +105,9 @@ export default function Command() {
 
 	const customTime = parseCustomTime(searchText);
 
-	// 今日の退勤時間と残り時間を計算
+	// Calculate today's leave time and remaining time
 	const leaveTime = todayStart
-		? calculateLeaveTime(todayStart, workHours, breakMins, lang)
+		? calculateLeaveTime(todayStart, workHours, breakMins)
 		: null;
 	const remaining = leaveTime
 		? calculateRemainingTime(leaveTime, todayStart)
@@ -128,18 +120,18 @@ export default function Command() {
 	return (
 		<List
 			isLoading={isLoading}
-			searchBarPlaceholder={t.searchBarPlaceholder}
+			searchBarPlaceholder="Enter time (e.g., 9:21)"
 			onSearchTextChange={setSearchText}
 		>
-			{/* 今日の予定（設定済みの場合） */}
+			{/* Today's schedule (if set) */}
 			{todayStart && leaveTime && remaining && (
-				<List.Section title={t.todaySection}>
+				<List.Section title="📅 Today">
 					<List.Item
-						title={t.leaveDisplay(leaveTime)}
+						title={`🏠 Leave at ${leaveTime}`}
 						subtitle={
 							remaining.isPast
-								? t.overtime(remaining.hours, remaining.minutes)
-								: t.remaining(remaining.hours, remaining.minutes)
+								? `${remaining.hours}h ${remaining.minutes}m overtime`
+								: `${remaining.hours}h ${remaining.minutes}m left`
 						}
 						icon={{
 							source: Icon.Clock,
@@ -149,7 +141,7 @@ export default function Command() {
 							{ tag: { value: todayStart, color: Color.SecondaryText } },
 							{
 								tag: {
-									value: t.workBreakTag(workHours, breakMins),
+									value: `Work ${workHours}h Break ${breakMins}m`,
 									color: Color.SecondaryText,
 								},
 							},
@@ -158,7 +150,7 @@ export default function Command() {
 							<ActionPanel>
 								<Action.CopyToClipboard title="Copy" content={leaveTime} />
 								<Action
-									title={t.reset}
+									title="Reset"
 									icon={Icon.Trash}
 									style={Action.Style.Destructive}
 									onAction={handleClear}
@@ -169,31 +161,30 @@ export default function Command() {
 				</List.Section>
 			)}
 
-			{/* 今すぐ出勤（現在時刻） */}
+			{/* Start now (current time) */}
 			{!searchText && (
-				<List.Section title={t.nowSection}>
+				<List.Section title="🚀 Start Now">
 					<List.Item
-						title={t.startNow(currentTime)}
+						title={`Now (${currentTime})`}
 						icon={{ source: Icon.Clock, tintColor: Color.Green }}
 						accessories={[
 							{
-								text: `→ ${calculateLeaveTime(currentTime, workHours, breakMins, lang)}`,
+								text: `→ ${calculateLeaveTime(currentTime, workHours, breakMins)}`,
 							},
 						]}
 						actions={
 							<ActionPanel>
 								<Action
-									title={t.select}
+									title="Select"
 									icon={Icon.Check}
 									onAction={() => handleSelect(currentTime)}
 								/>
 								<Action.CopyToClipboard
-									title={t.copyLeaveTime}
+									title="Copy Leave Time"
 									content={calculateLeaveTime(
 										currentTime,
 										workHours,
 										breakMins,
-										lang,
 									)}
 								/>
 							</ActionPanel>
@@ -202,21 +193,21 @@ export default function Command() {
 				</List.Section>
 			)}
 
-			{/* カスタム時間（入力が有効な場合） */}
+			{/* Custom time (if valid input) */}
 			{customTime && !START_TIMES.includes(customTime) && (
-				<List.Section title={t.customTimeSection}>
+				<List.Section title="✏️ Custom Time">
 					<List.Item
 						title={customTime}
 						icon={{ source: Icon.Plus, tintColor: Color.Orange }}
 						accessories={[
 							{
-								text: `→ ${calculateLeaveTime(customTime, workHours, breakMins, lang)}`,
+								text: `→ ${calculateLeaveTime(customTime, workHours, breakMins)}`,
 							},
 						]}
 						actions={
 							<ActionPanel>
 								<Action
-									title={t.select}
+									title="Select"
 									icon={Icon.Check}
 									onAction={() => handleSelect(customTime)}
 								/>
@@ -226,17 +217,17 @@ export default function Command() {
 				</List.Section>
 			)}
 
-			{/* 出勤時間選択 */}
-			<List.Section title={t.selectStartSection}>
+			{/* Select start time */}
+			<List.Section title="⏰ Select Start Time">
 				{filteredTimes.map((time) => {
-					const leave = calculateLeaveTime(time, workHours, breakMins, lang);
+					const leave = calculateLeaveTime(time, workHours, breakMins);
 					const rem = calculateRemainingTime(leave, null);
 					const isSelected = time === todayStart;
 
 					return (
 						<List.Item
 							key={time}
-							title={t.startDisplay(time)}
+							title={time}
 							icon={
 								isSelected
 									? { source: Icon.CheckCircle, tintColor: Color.Green }
@@ -244,17 +235,19 @@ export default function Command() {
 							}
 							accessories={[
 								{ text: `→ ${leave}` },
-								{ tag: rem.isPast ? "✓" : t.remaining(rem.hours, rem.minutes) },
+								{
+									tag: rem.isPast ? "✓" : `${rem.hours}h ${rem.minutes}m left`,
+								},
 							]}
 							actions={
 								<ActionPanel>
 									<Action
-										title={t.select}
+										title="Select"
 										icon={Icon.Check}
 										onAction={() => handleSelect(time)}
 									/>
 									<Action.CopyToClipboard
-										title={t.copyLeaveTime}
+										title="Copy Leave Time"
 										content={leave}
 									/>
 								</ActionPanel>

@@ -1,8 +1,8 @@
 {
 	"$schema": "https://www.raycast.com/schemas/extension.json",
 	"name": "leave-time-calculator",
-	"title": "Leave Time Calculator / 退勤時間計算",
-	"description": "Calculate your leave time based on start time and break duration / 出勤時間から退勤時間を計算",
+	"title": "Leave Time Calculator",
+	"description": "Calculate your leave time based on start time and break duration",
 	"icon": "command-icon.png",
 	"author": "harunonsystem",
 	"categories": [
@@ -32,28 +32,6 @@
 					"title": "Default Break Minutes",
 					"description": "Default break time in minutes (e.g., 60)",
 					"default": "60"
-				},
-				{
-					"name": "language",
-					"type": "dropdown",
-					"required": false,
-					"title": "Language / 言語",
-					"description": "Display language (System: auto-detect from macOS)",
-					"default": "system",
-					"data": [
-						{
-							"title": "System / システム設定",
-							"value": "system"
-						},
-						{
-							"title": "English",
-							"value": "en"
-						},
-						{
-							"title": "日本語",
-							"value": "ja"
-						}
-					]
 				}
 			]
 		}

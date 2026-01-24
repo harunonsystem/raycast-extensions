@@ -9,7 +9,6 @@ A Raycast extension that calculates your leaving time and remaining work hours b
 - **⏱️ Overtime Display** - After the scheduled leave time, shows "○ hours ○ minutes overtime"
 - **✏️ Custom Time Input** - Enter any time like `9:21` in the search bar
 - **🌙 Night Shift Support** - Correctly calculates shifts that span across midnight
-- **🌐 Japanese/English Support** - Auto-follows system language or manual setting
 
 ## 📸 Screenshots
 
@@ -30,7 +29,6 @@ A Raycast extension that calculates your leaving time and remaining work hours b
 |---------|-------------|---------|
 | Default Work Hours | Work hours per day | 8 hours |
 | Default Break Minutes | Break time | 60 minutes |
-| Language / 言語 | Display language (System/English/日本語) | System |
 
 <img width="996" height="557" alt="Image" src="metadata/en/config.png" />
 
