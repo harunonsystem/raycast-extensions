@@ -9,14 +9,13 @@ Raycast extension for calculating leave time based on arrival time. Supports nig
 ## Commands
 
 ```bash
-bun run dev        # Development mode (Raycast extension)
-bun run build      # Build for production
-bun run test       # Run tests with vitest
-bun run test -- tests/time-utils.test.ts  # Run specific test file
-bun run test -- -t "calculateLeaveTime"   # Run tests matching pattern
-bun run lint       # Raycast lint (ray lint)
-bun run check      # Lint & format check (Biome)
-bun run format     # Auto-format with Biome
+npm run dev        # Development mode (Raycast extension)
+npm run build      # Build for production
+npm run test       # Run tests with vitest
+npm run test -- tests/time-utils.test.ts  # Run specific test file
+npm run test -- -t "calculateLeaveTime"   # Run tests matching pattern
+npm run lint       # Lint (ray lint / ESLint + Prettier)
+npm run fix-lint   # Lint auto-fix (ray lint --fix)
 ```
 
 ## Architecture
@@ -35,13 +34,13 @@ bun run format     # Auto-format with Biome
 
 - `@raycast/api` - Raycast extension framework
 - `vitest` - Test runner (not bun test)
-- `@biomejs/biome` - Linting and formatting
+- `@raycast/eslint-config` - Linting and formatting (ESLint + Prettier)
 
 ## Development Guidelines
 
-- Use `bun install` instead of npm/yarn/pnpm
-- Use `bun run <script>` instead of npm run
-- Use `bunx <package>` instead of npx
+- Use `npm install` for dependency installation
+- Use `npm run <script>` for running scripts
+- Use `npx <package>` for one-off package execution
 
 ## Notes
 
